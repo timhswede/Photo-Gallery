@@ -18,9 +18,9 @@ abstract class VisibleFragment : Fragment() {
             // the notification
             Log.i(TAG, "canceling notification")
             resultCode = Activity.RESULT_CANCELED
+
         }
     }
-
     override fun onStart() {
         super.onStart()
         val filter = IntentFilter(PollWorker.ACTION_SHOW_NOTIFICATION)
@@ -31,10 +31,8 @@ abstract class VisibleFragment : Fragment() {
             null
         )
     }
-
     override fun onStop() {
         super.onStop()
         requireActivity().unregisterReceiver(onShowNotification)
     }
-
 }

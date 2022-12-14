@@ -12,8 +12,8 @@ import androidx.work.WorkerParameters
 
 private const val TAG = "PollWorker"
 
-class PollWorker(val context: Context, workerParameters: WorkerParameters)
-    : Worker(context, workerParameters) {
+class PollWorker(val context: Context, workerParams: WorkerParameters)
+    : Worker(context, workerParams) {
 
     override fun doWork(): Result {
         val query = QueryPreferences.getStoredQuery(context)
@@ -30,12 +30,11 @@ class PollWorker(val context: Context, workerParameters: WorkerParameters)
                 .body()
                 ?.photos
                 ?.galleryItems
-        } ?: emptyList<GalleryItem>()
+        } ?: emptyList()
 
         if (items.isEmpty()) {
             return Result.success()
         }
-
         val resultId = items.first().id
         if (resultId == lastResultId) {
             Log.i(TAG, "Got an old result: $resultId")
@@ -55,11 +54,11 @@ class PollWorker(val context: Context, workerParameters: WorkerParameters)
                 .setContentIntent(pendingIntent)
                 .setAutoCancel(true)
                 .build()
-
             showBackgroundNotification(0, notification)
-        }
-        return Result.success()
 
+        }
+
+        return Result.success()
     }
 
     private fun showBackgroundNotification(

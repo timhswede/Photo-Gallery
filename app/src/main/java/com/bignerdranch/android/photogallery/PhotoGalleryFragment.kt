@@ -1,5 +1,6 @@
 package com.bignerdranch.android.photogallery
 
+import android.content.Intent
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
@@ -10,6 +11,7 @@ import android.view.*
 import android.widget.ImageView
 import androidx.appcompat.widget.SearchView
 import androidx.core.content.ContextCompat
+import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import androidx.recyclerview.widget.GridLayoutManager
@@ -26,11 +28,13 @@ class PhotoGalleryFragment : VisibleFragment() {
     private lateinit var photoRecyclerView: RecyclerView
     private lateinit var thumbnailDownloader: ThumbnailDownloader<PhotoHolder>
 
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         retainInstance = true
         setHasOptionsMenu(true)
+
 
         photoGalleryViewModel =
             ViewModelProviders.of(this).get(PhotoGalleryViewModel::class.java)
@@ -42,6 +46,7 @@ class PhotoGalleryFragment : VisibleFragment() {
                 photoHolder.bindDrawable(drawable)
             }
         lifecycle.addObserver(thumbnailDownloader.fragmentLifecycleObserver)
+
     }
 
     override fun onCreateView(
@@ -52,11 +57,10 @@ class PhotoGalleryFragment : VisibleFragment() {
         viewLifecycleOwner.lifecycle.addObserver(
             thumbnailDownloader.viewLifecycleObserver
         )
-        val view = inflater.inflate(R.layout.fragment_photo_gallery, container, false)
 
+        val view = inflater.inflate(R.layout.fragment_photo_gallery, container, false)
         photoRecyclerView = view.findViewById(R.id.photo_recycler_view)
         photoRecyclerView.layoutManager = GridLayoutManager(context, 3)
-
         return view
     }
 
@@ -65,18 +69,17 @@ class PhotoGalleryFragment : VisibleFragment() {
         photoGalleryViewModel.galleryItemLiveData.observe(
             viewLifecycleOwner,
             Observer { galleryItems ->
-                Log.d(TAG, "Have gallery items from view model $galleryItems")
                 photoRecyclerView.adapter = PhotoAdapter(galleryItems)
             })
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
-        thumbnailDownloader.clearQueue()
         viewLifecycleOwner.lifecycle.removeObserver(
             thumbnailDownloader.viewLifecycleObserver
         )
     }
+
 
     override fun onDestroy() {
         super.onDestroy()
@@ -85,9 +88,9 @@ class PhotoGalleryFragment : VisibleFragment() {
         )
     }
 
-    override fun onCreateOptionsMenu(menu: Menu, menuInflater: MenuInflater) {
-        super.onCreateOptionsMenu(menu, menuInflater)
-        menuInflater.inflate(R.menu.fragment_photo_gallery, menu)
+    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
+        super.onCreateOptionsMenu(menu, inflater)
+        inflater.inflate(R.menu.fragment_photo_gallery, menu)
 
         val searchItem: MenuItem = menu.findItem(R.id.menu_item_search)
         val searchView = searchItem.actionView as SearchView
@@ -107,8 +110,7 @@ class PhotoGalleryFragment : VisibleFragment() {
 
             setOnSearchClickListener {
                 searchView.setQuery(photoGalleryViewModel.searchTerm, false)
-            }
-        }
+            }}
 
         val toggleItem = menu.findItem(R.id.menu_item_toggle_polling)
         val isPolling = QueryPreferences.isPolling(requireContext())
@@ -118,12 +120,15 @@ class PhotoGalleryFragment : VisibleFragment() {
             R.string.start_polling
         }
         toggleItem.setTitle(toggleItemTitle)
+
+
     }
+
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.menu_item_clear -> {
-                photoGalleryViewModel.fetchPhotos()
+                photoGalleryViewModel.fetchPhotos("")
                 true
             }
             R.id.menu_item_toggle_polling -> {
@@ -139,8 +144,7 @@ class PhotoGalleryFragment : VisibleFragment() {
                         .Builder(PollWorker::class.java, 15, TimeUnit.MINUTES)
                         .setConstraints(constraints)
                         .build()
-                    WorkManager.getInstance().enqueueUniquePeriodicWork(
-                        POLL_WORK,
+                    WorkManager.getInstance().enqueueUniquePeriodicWork(POLL_WORK,
                         ExistingPeriodicWorkPolicy.KEEP,
                         periodicRequest)
                     QueryPreferences.setPolling(requireContext(), true)
@@ -152,13 +156,27 @@ class PhotoGalleryFragment : VisibleFragment() {
         }
     }
 
-    private class PhotoHolder(private val itemImageView: ImageView) : RecyclerView.ViewHolder(itemImageView) {
-
+    private inner class PhotoHolder(private val itemImageView: ImageView)
+        : RecyclerView.ViewHolder(itemImageView),
+        View.OnClickListener {
+        private lateinit var galleryItem: GalleryItem
+        init {
+            itemView.setOnClickListener(this)
+        }
         val bindDrawable: (Drawable) -> Unit = itemImageView::setImageDrawable
+
+        fun bindGalleryItem(item: GalleryItem) {
+            galleryItem = item
+        }
+        override fun onClick(view: View) {
+            val intent = PhotoPageActivity
+                .newIntent(requireContext(), galleryItem.photoPageUri)
+            startActivity(intent)}
     }
 
-    private inner class PhotoAdapter(private val galleryItems: List<GalleryItem>) :
-        RecyclerView.Adapter<PhotoHolder>() {
+
+    private inner class PhotoAdapter(private val galleryItems: List<GalleryItem>)
+        : RecyclerView.Adapter<PhotoHolder>() {
 
         override fun onCreateViewHolder(
             parent: ViewGroup,
@@ -170,18 +188,20 @@ class PhotoGalleryFragment : VisibleFragment() {
                 false
             ) as ImageView
             return PhotoHolder(view)
+
         }
 
         override fun getItemCount(): Int = galleryItems.size
-
         override fun onBindViewHolder(holder: PhotoHolder, position: Int) {
             val galleryItem = galleryItems[position]
+            holder.bindGalleryItem(galleryItem)
             val placeholder: Drawable = ContextCompat.getDrawable(
                 requireContext(),
                 R.drawable.bill_up_close
             ) ?: ColorDrawable()
             holder.bindDrawable(placeholder)
             thumbnailDownloader.queueThumbnail(holder, galleryItem.url)
+
         }
     }
 

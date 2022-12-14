@@ -13,17 +13,18 @@ private const val TAG = "NotificationReceiver"
 class NotificationReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
-        Log.i(TAG, "Received result: $resultCode")
+        Log.i(TAG, "received result: $resultCode")
         if (resultCode != Activity.RESULT_OK) {
-            return
+             return
         }
+
         val requestCode = intent.getIntExtra(PollWorker.REQUEST_CODE, 0)
         val notification: Notification? =
             intent.getParcelableExtra(PollWorker.NOTIFICATION)
-
         val notificationManager = NotificationManagerCompat.from(context)
         if (notification != null) {
             notificationManager.notify(requestCode, notification)
         }
+
     }
 }

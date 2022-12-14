@@ -15,14 +15,12 @@ import androidx.appcompat.app.AppCompatActivity
 private const val ARG_URI = "photo_page_url"
 
 class PhotoPageFragment : VisibleFragment() {
-
     private lateinit var uri: Uri
     private lateinit var webView: WebView
     private lateinit var progressBar: ProgressBar
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         uri = arguments?.getParcelable(ARG_URI) ?: Uri.EMPTY
     }
 
@@ -39,8 +37,6 @@ class PhotoPageFragment : VisibleFragment() {
 
         webView = view.findViewById(R.id.web_view)
         webView.settings.javaScriptEnabled = true
-        webView.webViewClient = WebViewClient()
-        webView.loadUrl(uri.toString())
         webView.webChromeClient = object : WebChromeClient() {
             override fun onProgressChanged(webView: WebView, newProgress: Int) {
                 if (newProgress == 100) {
@@ -50,15 +46,14 @@ class PhotoPageFragment : VisibleFragment() {
                     progressBar.progress = newProgress
                 }
             }
-
             override fun onReceivedTitle(view: WebView?, title: String?) {
                 (activity as AppCompatActivity).supportActionBar?.subtitle = title
             }
         }
-
+        webView.webViewClient = WebViewClient()
+        webView.loadUrl(uri.toString())
         return view
     }
-
     companion object {
         fun newInstance(uri: Uri): PhotoPageFragment {
             return PhotoPageFragment().apply {
